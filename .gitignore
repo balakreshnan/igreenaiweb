@@ -149,6 +149,17 @@ activemq-data/
 
 # Environments
 .env
+.env.local
+.env.*.local
+.next/
+node_modules/
+igreen-data.json
+.pnpm-store/
+*.tsbuildinfo
+
+# Application source (the inherited Python template ignores lib/ above)
+!lib/
+!lib/**
 .envrc
 .venv
 env/
