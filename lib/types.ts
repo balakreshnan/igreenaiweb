@@ -12,6 +12,31 @@ export type Impact = {
   createdAt: string;
 };
 
+export type GoalAnswers = {
+  focus: "climate" | "cost" | "wellbeing" | "community";
+  pace: "starter" | "steady" | "leader";
+  setting: "rent" | "own" | "workplace";
+  transport: "car" | "mixed" | "low-carbon" | "remote";
+  food: "omnivore" | "flexitarian" | "plant-forward";
+  barrier: "time" | "cost" | "knowledge" | "support";
+};
+
+export type GoalRecommendation = {
+  id: string;
+  category: Impact["category"] | "community";
+  title: string;
+  description: string;
+  why: string;
+  effort: "Quick win" | "Build a habit" | "Lead change";
+  frequency: string;
+};
+
+export type GoalAssessment = {
+  answers: GoalAnswers;
+  recommendations: GoalRecommendation[];
+  completedAt: string;
+};
+
 export type UserRecord = {
   id: string;
   email: string;
@@ -20,6 +45,7 @@ export type UserRecord = {
   accountType: AccountType;
   city?: string;
   goals: string[];
+  goalAssessment?: GoalAssessment;
   passwordHash: string;
   passwordSalt: string;
   createdAt: string;

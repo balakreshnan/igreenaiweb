@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { Impact, SafeUser } from "@/lib/types";
+import type { GoalAnswers, Impact, SafeUser } from "@/lib/types";
 
 type View = "home" | "register" | "login" | "dashboard" | "admin-login" | "admin";
 type AdminData = { createdAt: string; users: SafeUser[] };
@@ -19,6 +19,7 @@ const icons: Record<string, React.ReactNode> = {
   lock: <><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
   logout: <><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></>,
   spark: <path d="m12 3-1.4 4.6a4 4 0 0 1-2.7 2.7L3 12l4.9 1.7a4 4 0 0 1 2.7 2.7L12 21l1.4-4.6a4 4 0 0 1 2.7-2.7L21 12l-4.9-1.7a4 4 0 0 1-2.7-2.7L12 3Z"/>,
+  target: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3V1M21 12h2M12 21v2M3 12H1"/></>,
   menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>,
 };
 
@@ -54,8 +55,10 @@ export default function GreenApp() {
   const [admin, setAdmin] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
   const [menu, setMenu] = useState(false);
+  const [communityCount, setCommunityCount] = useState<number | null>(null);
 
   useEffect(() => {
+    api<{ members: number }>("/api/community").then((data) => setCommunityCount(data.members)).catch(() => undefined);
     api<{ authenticated: boolean; role?: string; user?: SafeUser }>("/api/auth/me")
       .then((data) => {
         if (data.role === "user" && data.user) { setUser(data.user); setView("dashboard"); }
@@ -92,7 +95,7 @@ export default function GreenApp() {
         </nav>
       </header>
 
-      {view === "home" && <Home onJoin={() => go("register")} onLogin={() => go("login")} />}
+      {view === "home" && <Home onJoin={() => go("register")} onLogin={() => go("login")} communityCount={communityCount} />}
       {(view === "register" || view === "login" || view === "admin-login") && <AuthView mode={view} onDone={(nextUser, isAdmin) => { if (isAdmin) { go("admin"); loadAdmin(); } else { setUser(nextUser!); go("dashboard"); } }} onSwitch={go} />}
       {view === "dashboard" && user && <Dashboard user={user} setUser={setUser} />}
       {view === "admin" && <Admin data={admin} />}
@@ -104,12 +107,12 @@ export default function GreenApp() {
   );
 }
 
-function Home({ onJoin, onLogin }: { onJoin: () => void; onLogin: () => void }) {
+function Home({ onJoin, onLogin, communityCount }: { onJoin: () => void; onLogin: () => void; communityCount: number | null }) {
   return <main>
     <section className="hero">
       <div className="hero-blob blob-one"/><div className="hero-blob blob-two"/>
       <div className="container hero-grid">
-        <div className="hero-copy"><div className="eyebrow"><span/> One planet. Billions of possibilities.</div><h1>Your everyday choices can <em>change the world.</em></h1><p>igreen.ai brings people and organizations together to turn simple sustainable actions into measurable, collective impact.</p><div className="hero-actions"><button className="button button-primary button-large" onClick={onJoin}>Start your impact journey <Icon name="arrow" /></button><a className="watch-link" href="#mission"><span className="play">▶</span> Discover our mission</a></div><div className="proof"><div className="avatars"><span>MJ</span><span>AK</span><span>SR</span><span>+</span></div><p><b>A growing global community</b><br/>choosing progress every day</p></div></div>
+        <div className="hero-copy"><div className="eyebrow"><span/> One planet. Billions of possibilities.</div><h1>Your everyday choices can <em>change the world.</em></h1><p>igreen.ai brings people and organizations together to turn simple sustainable actions into measurable, collective impact.</p><div className="hero-actions"><button className="button button-primary button-large" onClick={onJoin}>Start your impact journey <Icon name="arrow" /></button><a className="watch-link" href="#mission"><span className="play">▶</span> Discover our mission</a></div><div className="proof"><div className="avatars"><span>MJ</span><span>AK</span><span>SR</span><span>+</span></div><p><b>{communityCount === null ? "A growing global community" : communityCount === 0 ? "Be our first community member" : `${communityCount.toLocaleString()} ${communityCount === 1 ? "member" : "members"} strong`}</b><br/>choosing progress every day</p></div></div>
         <div className="planet-stage" aria-label="Illustration of a thriving planet and community">
           <div className="orbit orbit-one"><span/></div><div className="orbit orbit-two"><span/></div>
           <div className="planet"><div className="land land-one"/><div className="land land-two"/><div className="land land-three"/><div className="planet-shine"/></div>
@@ -162,18 +165,49 @@ function AuthView({ mode, onDone, onSwitch }: { mode: "register" | "login" | "ad
 }
 
 function Dashboard({ user, setUser }: { user: SafeUser; setUser: (user: SafeUser) => void }) {
-  const [showForm, setShowForm] = useState(false); const [category, setCategory] = useState<Impact["category"]>("transport"); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const [showForm, setShowForm] = useState(false); const [showGoals, setShowGoals] = useState(false); const [category, setCategory] = useState<Impact["category"]>("transport"); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const total = useMemo(() => user.impacts.reduce((sum,item)=>sum+item.co2e,0), [user]);
   const level = levelFor(total); const progress = Math.min(100, total / level.next * 100);
   const byCategory = Object.keys(categoryInfo).map(key => ({ key: key as Impact["category"], value: user.impacts.filter(i=>i.category===key).reduce((s,i)=>s+i.co2e,0) }));
   async function add(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const body = Object.fromEntries(new FormData(event.currentTarget).entries()); try { const data=await api<{user:SafeUser}>("/api/impacts",{method:"POST",body:JSON.stringify(body)}); setUser(data.user); setShowForm(false); } catch(e){setError(e instanceof Error?e.message:"Unable to save.");} finally{setBusy(false);} }
-  return <main className="dashboard-page"><div className="container dashboard-wrap"><div className="dashboard-head"><div><span className="kicker">YOUR IMPACT SPACE</span><h1>Good to see you, <em>{user.displayName.split(" ")[0]}.</em></h1><p>Every action here is a small vote for the future you want.</p></div><button className="button button-primary" onClick={()=>setShowForm(true)}><Icon name="plus"/> Log an action</button></div>
+  return <main className="dashboard-page"><div className="container dashboard-wrap"><div className="dashboard-head"><div><span className="kicker">YOUR IMPACT SPACE</span><h1>Good to see you, <em>{user.displayName.split(" ")[0]}.</em></h1><p>Every action here is a small vote for the future you want.</p></div><div className="dashboard-actions"><button className="button button-outline" onClick={()=>setShowGoals(true)}><Icon name="target"/> Assess my goals</button><button className="button button-primary" onClick={()=>setShowForm(true)}><Icon name="plus"/> Log an action</button></div></div>
     <div className="stat-grid"><article className="stat-card primary-stat"><span>ESTIMATED IMPACT</span><strong>{total.toFixed(1)} <small>kg CO₂e</small></strong><p>avoided through your logged actions</p><div className="stat-sprout">♣</div></article><article className="stat-card"><span>ACTIONS LOGGED</span><strong>{user.impacts.length}</strong><p>{user.impacts.length ? "Small wins worth celebrating" : "Your first action starts here"}</p></article><article className="stat-card level-card"><span>YOUR LEVEL</span><div className="level-line"><b>{level.number}</b><strong>{level.name}</strong></div><div className="progress"><i style={{width:`${progress}%`}}/></div><p>{Math.max(0,level.next-total).toFixed(1)} kg to the next milestone</p></article></div>
+    <section className="panel goals-panel"><div className="goals-intro"><span className="goal-icon"><Icon name="target" size={25}/></span><div><span className="kicker">YOUR PERSONAL ACTION PLAN</span><h2>{user.goalAssessment ? "Recommended for your goals" : "Not sure where to begin?"}</h2><p>{user.goalAssessment ? `Built from your answers · refreshed ${new Date(user.goalAssessment.completedAt).toLocaleDateString()}` : "Answer six quick questions and get a practical starting plan shaped around your life."}</p></div><button className="button button-small button-dark" onClick={()=>setShowGoals(true)}>{user.goalAssessment ? "Retake assessment" : "Assess my goals"}<Icon name="arrow" size={16}/></button></div>{user.goalAssessment && <div className="recommendation-grid">{user.goalAssessment.recommendations.map((item,index)=><article key={item.id}><div className="recommendation-top"><span>{String(index+1).padStart(2,"0")}</span><b>{item.effort}</b></div><h3>{item.title}</h3><p>{item.description}</p><small>{item.frequency}</small></article>)}</div>}</section>
     <div className="dashboard-grid"><section className="panel"><div className="panel-title"><div><span className="kicker">YOUR MIX</span><h2>Impact by area</h2></div><span className="period">All time</span></div><div className="bar-chart">{byCategory.map(item=><div className="bar-row" key={item.key}><span>{categoryInfo[item.key].label}</span><div><i style={{width:`${total ? Math.max(2,item.value/Math.max(...byCategory.map(x=>x.value))*100) : 0}%`,background:categoryInfo[item.key].color}}/></div><b>{item.value.toFixed(1)}</b></div>)}</div><small className="method-note">Estimates use simple category factors and are directional, not audited carbon accounting.</small></section>
       <section className="panel nudge"><span className="nudge-icon"><Icon name="spark"/></span><span className="kicker">A GENTLE NUDGE</span><h2>Try a no-car trip this week.</h2><p>A five-kilometer walk, cycle, or transit swap can avoid about 1 kg CO₂e—and add a little movement to your day.</p><button onClick={()=>{setCategory("transport");setShowForm(true)}}>Log a travel swap <Icon name="arrow" size={17}/></button></section></div>
     <section className="panel activity-panel"><div className="panel-title"><div><span className="kicker">YOUR RECORD</span><h2>Recent actions</h2></div><a className={`button button-small button-outline ${!user.impacts.length ? "disabled" : ""}`} href={user.impacts.length ? "/api/export" : undefined}><Icon name="download" size={16}/> Export CSV</a></div>{user.impacts.length ? <div className="activity-list">{user.impacts.slice(0,8).map(item=><article key={item.id}><span className="activity-dot" style={{background:categoryInfo[item.category].color}}><Icon name="check" size={16}/></span><div><b>{item.action}</b><small>{categoryInfo[item.category].label} · {new Date(item.date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}</small></div><strong>+{item.co2e.toFixed(1)} <small>kg CO₂e</small></strong></article>)}</div> : <div className="empty-state"><span><Icon name="leaf" size={30}/></span><h3>Your impact story starts here.</h3><p>Log one sustainable choice—big or small—to see your progress take shape.</p><button className="button button-primary" onClick={()=>setShowForm(true)}>Log my first action</button></div>}</section>
     <div className="private-banner"><Icon name="lock"/><div><b>Your space is private.</b><p>Only you can view this dashboard. Download your own activity when you choose to share it.</p></div></div>
-  </div>{showForm && <div className="modal-backdrop" onMouseDown={()=>setShowForm(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowForm(false)}>×</button><span className="kicker">ADD TO YOUR STORY</span><h2>Log a sustainable action</h2><p>Choose the closest category. We’ll create a simple directional estimate.</p><form onSubmit={add}><label>Impact area<select name="category" value={category} onChange={e=>setCategory(e.target.value as Impact["category"])}>{Object.entries(categoryInfo).map(([key,val])=><option key={key} value={key}>{val.label}</option>)}</select></label><label>What did you do?<input name="action" required minLength={2} defaultValue={categoryInfo[category].suggestion}/></label><div className="field-row"><label>Amount<input name="quantity" type="number" min="0.01" max="100000" step="0.01" required placeholder="1"/></label><label>Measured in<input value={categoryInfo[category].unit} readOnly/></label></div><label>Date<input name="date" type="date" required defaultValue={new Date().toISOString().slice(0,10)}/></label><label>Note <span>Optional</span><textarea name="note" rows={2} placeholder="A detail you want to remember"/></label>{error&&<div className="form-error">{error}</div>}<button className="button button-primary submit-button" disabled={busy}>{busy?"Saving…":"Save this action"}<Icon name="arrow"/></button></form></div></div>}</main>;
+  </div>{showForm && <div className="modal-backdrop" onMouseDown={()=>setShowForm(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowForm(false)}>×</button><span className="kicker">ADD TO YOUR STORY</span><h2>Log a sustainable action</h2><p>Choose the closest category. We’ll create a simple directional estimate.</p><form onSubmit={add}><label>Impact area<select name="category" value={category} onChange={e=>setCategory(e.target.value as Impact["category"])}>{Object.entries(categoryInfo).map(([key,val])=><option key={key} value={key}>{val.label}</option>)}</select></label><label>What did you do?<input name="action" required minLength={2} defaultValue={categoryInfo[category].suggestion}/></label><div className="field-row"><label>Amount<input name="quantity" type="number" min="0.01" max="100000" step="0.01" required placeholder="1"/></label><label>Measured in<input value={categoryInfo[category].unit} readOnly/></label></div><label>Date<input name="date" type="date" required defaultValue={new Date().toISOString().slice(0,10)}/></label><label>Note <span>Optional</span><textarea name="note" rows={2} placeholder="A detail you want to remember"/></label>{error&&<div className="form-error">{error}</div>}<button className="button button-primary submit-button" disabled={busy}>{busy?"Saving…":"Save this action"}<Icon name="arrow"/></button></form></div></div>}{showGoals && <GoalAssessmentModal user={user} onClose={()=>setShowGoals(false)} onSaved={(updated)=>{setUser(updated);setShowGoals(false)}}/>}</main>;
+}
+
+const goalQuestions: Array<{ key: keyof GoalAnswers; question: string; hint: string; options: Array<[string,string,string]> }> = [
+  { key: "focus", question: "What matters most to you right now?", hint: "This helps us choose actions with benefits you care about.", options: [["climate","Climate impact","Reduce my footprint"],["cost","Saving money","Lower everyday costs"],["wellbeing","Health & wellbeing","Feel better while acting"],["community","Community","Bring others along"]] },
+  { key: "pace", question: "What pace feels realistic?", hint: "A good plan should fit your available energy.", options: [["starter","Start small","Three simple actions"],["steady","Build momentum","A balanced action plan"],["leader","Lead change","Take on a bigger role"]] },
+  { key: "setting", question: "Where can you influence change?", hint: "Choose the setting where you spend the most time.", options: [["rent","I rent","Flexible, no-renovation ideas"],["own","I own my home","Household improvements"],["workplace","At work","Team and operations"]] },
+  { key: "transport", question: "How do you usually get around?", hint: "Choose the closest match for a normal week.", options: [["car","Mostly by car","I drive most journeys"],["mixed","A mix","Car plus transit or active travel"],["low-carbon","Mostly low-carbon","Walk, cycle, transit or EV"],["remote","Mostly at home","Very little routine travel"]] },
+  { key: "food", question: "Which best describes your meals?", hint: "There is no perfect answer—this only shapes your recommendations.", options: [["omnivore","Mixed diet","Meat most days"],["flexitarian","Flexitarian","Some plant-first meals"],["plant-forward","Plant-forward","Mostly or fully plant-based"]] },
+  { key: "barrier", question: "What most often gets in the way?", hint: "We’ll favor actions that work around this barrier.", options: [["time","Time","My schedule is full"],["cost","Cost","It needs to be affordable"],["knowledge","Know-how","I need clearer guidance"],["support","Support","I want others involved"]] },
+];
+
+function GoalAssessmentModal({ user, onClose, onSaved }: { user: SafeUser; onClose: () => void; onSaved: (user: SafeUser) => void }) {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Partial<GoalAnswers>>(user.goalAssessment?.answers || {});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const question = goalQuestions[step];
+  const selected = answers[question.key];
+
+  async function next() {
+    if (!selected) return;
+    if (step < goalQuestions.length - 1) { setStep(step + 1); return; }
+    setBusy(true); setError("");
+    try {
+      const data = await api<{ user: SafeUser }>("/api/goals", { method: "POST", body: JSON.stringify(answers) });
+      onSaved(data.user);
+    } catch (e) { setError(e instanceof Error ? e.message : "Unable to create your plan."); setBusy(false); }
+  }
+
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal assessment-modal" onMouseDown={e=>e.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><div className="assessment-progress"><span>YOUR GOAL ASSESSMENT</span><b>{step+1} / {goalQuestions.length}</b><div><i style={{width:`${((step+1)/goalQuestions.length)*100}%`}}/></div></div><div className="question-count">{String(step+1).padStart(2,"0")}</div><h2>{question.question}</h2><p>{question.hint}</p><div className="answer-options">{question.options.map(([value,label,description])=><button key={value} className={selected===value ? "selected" : ""} onClick={()=>setAnswers({...answers,[question.key]:value})}><span className="radio-dot"/><span><b>{label}</b><small>{description}</small></span>{selected===value&&<Icon name="check" size={18}/>}</button>)}</div>{error&&<div className="form-error">{error}</div>}<div className="assessment-nav"><button className="back-button" disabled={step===0||busy} onClick={()=>setStep(step-1)}>← Previous</button><button className="button button-primary" disabled={!selected||busy} onClick={next}>{busy?"Building your plan…":step===goalQuestions.length-1?"Create my action plan":"Next question"}<Icon name="arrow" size={17}/></button></div><small className="assessment-private"><Icon name="lock" size={13}/> Your answers stay in your private member profile.</small></div></div>;
 }
 
 function Admin({ data }: { data: AdminData | null }) {
