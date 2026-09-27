@@ -57,8 +57,14 @@ export default function GreenApp() {
   const [menu, setMenu] = useState(false);
   const [communityCount, setCommunityCount] = useState<number | null>(null);
 
+  function refreshCommunityCount() {
+    api<{ members: number }>("/api/community", { cache: "no-store" })
+      .then((data) => setCommunityCount(data.members))
+      .catch(() => undefined);
+  }
+
   useEffect(() => {
-    api<{ members: number }>("/api/community").then((data) => setCommunityCount(data.members)).catch(() => undefined);
+    refreshCommunityCount();
     api<{ authenticated: boolean; role?: string; user?: SafeUser }>("/api/auth/me")
       .then((data) => {
         if (data.role === "user" && data.user) { setUser(data.user); setView("dashboard"); }
@@ -96,7 +102,7 @@ export default function GreenApp() {
       </header>
 
       {view === "home" && <Home onJoin={() => go("register")} onLogin={() => go("login")} communityCount={communityCount} />}
-      {(view === "register" || view === "login" || view === "admin-login") && <AuthView mode={view} onDone={(nextUser, isAdmin) => { if (isAdmin) { go("admin"); loadAdmin(); } else { setUser(nextUser!); go("dashboard"); } }} onSwitch={go} />}
+      {(view === "register" || view === "login" || view === "admin-login") && <AuthView mode={view} onDone={(nextUser, isAdmin) => { if (isAdmin) { go("admin"); loadAdmin(); } else { setUser(nextUser!); if (view === "register") refreshCommunityCount(); go("dashboard"); } }} onSwitch={go} />}
       {view === "dashboard" && user && <Dashboard user={user} setUser={setUser} />}
       {view === "admin" && <Admin data={admin} />}
 

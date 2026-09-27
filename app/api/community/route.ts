@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { readDatabase } from "@/lib/db";
+import { countUsers } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const db = await readDatabase();
+    const members = await countUsers();
     return NextResponse.json(
-      { members: db.users.length },
-      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+      { members },
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     console.error("Community count failed", error);

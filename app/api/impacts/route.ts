@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getSession } from "@/lib/auth";
-import { updateDatabase } from "@/lib/db";
+import { addImpact } from "@/lib/db";
 import { safeUser, type Impact } from "@/lib/types";
 
 const factors: Record<Impact["category"], { factor: number; unit: string }> = {
@@ -37,13 +37,8 @@ export async function POST(request: Request) {
       note: note || undefined,
       createdAt: new Date().toISOString(),
     };
-    const user = await updateDatabase((db) => {
-      const record = db.users.find((item) => item.id === session.sub);
-      if (!record) throw new Error("USER_NOT_FOUND");
-      record.impacts.unshift(impact);
-      return safeUser(record);
-    });
-    return NextResponse.json({ impact, user }, { status: 201 });
+    const user = await addImpact(session.sub, impact);
+    return NextResponse.json({ impact, user: safeUser(user) }, { status: 201 });
   } catch (error) {
     console.error("Impact creation failed", error);
     return NextResponse.json({ error: "Unable to save this activity." }, { status: 500 });

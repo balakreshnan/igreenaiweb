@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { readDatabase } from "@/lib/db";
+import { findUserById } from "@/lib/db";
 
 function csv(value: string | number) {
   return `"${String(value).replaceAll('"', '""')}"`;
@@ -8,8 +8,7 @@ function csv(value: string | number) {
 export async function GET() {
   const session = await getSession();
   if (!session || session.role !== "user") return new Response("Unauthorized", { status: 401 });
-  const db = await readDatabase();
-  const user = db.users.find((item) => item.id === session.sub);
+  const user = await findUserById(session.sub);
   if (!user) return new Response("Not found", { status: 404 });
   const header = ["Date", "Category", "Activity", "Quantity", "Unit", "Estimated kg CO2e saved", "Note"];
   const rows = user.impacts.map((item) => [item.date, item.category, item.action, item.quantity, item.unit, item.co2e, item.note || ""]);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { createSession, hashPassword } from "@/lib/auth";
-import { updateDatabase } from "@/lib/db";
+import { createUser, DatabaseConfigurationError, DuplicateEmailError } from "@/lib/db";
 import { safeUser, type AccountType, type UserRecord } from "@/lib/types";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,30 +22,32 @@ export async function POST(request: Request) {
     }
 
     const { salt, hash } = hashPassword(password);
-    const user = await updateDatabase((db) => {
-      if (db.users.some((item) => item.email === email)) throw new Error("EMAIL_EXISTS");
-      const record: UserRecord = {
-        id: randomUUID(),
-        displayName,
-        email,
-        passwordHash: hash,
-        passwordSalt: salt,
-        accountType,
-        organization: organization || undefined,
-        city: city || undefined,
-        goals: [],
-        impacts: [],
-        createdAt: new Date().toISOString(),
-      };
-      db.users.push(record);
-      return safeUser(record);
-    });
+    const record: UserRecord = {
+      id: randomUUID(),
+      displayName,
+      email,
+      passwordHash: hash,
+      passwordSalt: salt,
+      accountType,
+      organization: organization || undefined,
+      city: city || undefined,
+      goals: [],
+      impacts: [],
+      createdAt: new Date().toISOString(),
+    };
+    const user = safeUser(await createUser(record));
 
     await createSession(user.id, "user");
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.message === "EMAIL_EXISTS") {
+    if (error instanceof DuplicateEmailError) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+    }
+    if (error instanceof DatabaseConfigurationError) {
+      return NextResponse.json(
+        { error: "Registration is temporarily unavailable because Neon Postgres is not configured." },
+        { status: 503 },
+      );
     }
     console.error("Registration failed", error);
     return NextResponse.json({ error: "We couldn't create your account. Please try again." }, { status: 500 });

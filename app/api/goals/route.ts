@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { updateDatabase } from "@/lib/db";
+import { findUserById, saveGoalAssessment } from "@/lib/db";
 import { recommendGoals } from "@/lib/goals";
 import { safeUser, type GoalAnswers } from "@/lib/types";
 
@@ -21,15 +21,15 @@ export async function POST(request: Request) {
     const valid = Object.entries(allowed).every(([key, values]) => values.includes(String(body[key as keyof GoalAnswers]) as never));
     if (!valid) return NextResponse.json({ error: "Please answer every question." }, { status: 400 });
     const answers = body as GoalAnswers;
-    const user = await updateDatabase((db) => {
-      const record = db.users.find((item) => item.id === session.sub);
-      if (!record) throw new Error("USER_NOT_FOUND");
-      const generated = recommendGoals(answers, record.accountType);
-      record.goals = generated.map((item) => item.title);
-      record.goalAssessment = { answers, recommendations: generated, completedAt: new Date().toISOString() };
-      return safeUser(record);
+    const record = await findUserById(session.sub);
+    if (!record) throw new Error("USER_NOT_FOUND");
+    const recommendations = recommendGoals(answers, record.accountType);
+    const user = await saveGoalAssessment(session.sub, {
+      answers,
+      recommendations,
+      completedAt: new Date().toISOString(),
     });
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: safeUser(user) });
   } catch (error) {
     console.error("Goal assessment failed", error);
     return NextResponse.json({ error: "Unable to save your recommendations." }, { status: 500 });
