@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       city: city || undefined,
       goals: [],
       impacts: [],
+      schedules: [],
       createdAt: new Date().toISOString(),
     };
     const user = safeUser(await createUser(record));

@@ -9,6 +9,23 @@ export type Impact = {
   co2e: number;
   date: string;
   note?: string;
+  source?: "manual" | "schedule" | "bulk";
+  scheduleId?: string;
+  createdAt: string;
+};
+
+export type ActivitySchedule = {
+  id: string;
+  category: Impact["category"];
+  action: string;
+  quantity: number;
+  unit: string;
+  co2e: number;
+  frequency: "daily" | "weekly" | "monthly";
+  startDate: string;
+  nextRunDate: string;
+  note?: string;
+  active: boolean;
   createdAt: string;
 };
 
@@ -50,6 +67,7 @@ export type UserRecord = {
   passwordSalt: string;
   createdAt: string;
   impacts: Impact[];
+  schedules: ActivitySchedule[];
 };
 
 export type Database = { version: 1; createdAt: string; users: UserRecord[] };
