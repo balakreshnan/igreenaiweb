@@ -2,9 +2,14 @@
 
 A Material Design 3-inspired sustainability community built with Next.js. People, businesses, and enterprise teams can create private profiles, log or schedule practical actions, bulk upload activity from Excel, follow their progress, and download their own activity as CSV.
 
+## User documentation
+
+See the [igreen.ai User Guide](docs/USER_GUIDE.md) for step-by-step account creation, sign-in, dashboard use, activity logging, recurring schedules, Excel uploads, CSV exports, and troubleshooting.
+
 ## What is included
 
 - Mission-led responsive landing page with individual, business, and enterprise pathways
+- Homepage introduction video and an interactive How to learning center with seven guided tutorials
 - Private account registration and sign-in with scrypt password hashing
 - Signed, HTTP-only, same-site session cookies
 - Personal impact dashboard, milestones, category summaries, activity history, and CSV export

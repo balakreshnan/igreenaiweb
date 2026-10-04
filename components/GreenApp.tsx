@@ -3,9 +3,10 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import brandLogo from "@/images/igreenaisismall.jpg";
+import HowTo from "@/components/HowTo";
 import type { ActivitySchedule, GoalAnswers, Impact, SafeUser } from "@/lib/types";
 
-type View = "home" | "register" | "login" | "dashboard" | "admin-login" | "admin";
+type View = "home" | "howto" | "register" | "login" | "dashboard" | "admin-login" | "admin";
 type AdminData = { createdAt: string; users: SafeUser[] };
 
 const icons: Record<string, React.ReactNode> = {
@@ -105,6 +106,7 @@ export default function GreenApp() {
           <button className="menu-button" onClick={() => setMenu(!menu)} aria-label="Toggle menu"><Icon name="menu" /></button>
           <div className={`nav-links ${menu ? "open" : ""}`}>
             {view === "home" && <><a href="#mission" onClick={() => setMenu(false)}>Mission</a><a href="#pathways" onClick={() => setMenu(false)}>Take action</a><a href="#community" onClick={() => setMenu(false)}>Community</a></>}
+            <button className="text-button" onClick={() => go("howto")} aria-current={view === "howto" ? "page" : undefined}>How to</button>
             {user ? <><button className="text-button" onClick={() => go("dashboard")}>My impact</button><button className="button button-small button-dark" onClick={logout}><Icon name="logout" size={16} /> Sign out</button></>
               : view === "admin" ? <button className="button button-small button-dark" onClick={logout}><Icon name="logout" size={16} /> Sign out</button>
               : <><button className="text-button" onClick={() => go("login")}>Sign in</button><button className="button button-small button-primary" onClick={() => go("register")}>Join the movement <Icon name="arrow" size={16} /></button></>}
@@ -112,19 +114,20 @@ export default function GreenApp() {
         </nav>
       </header>
 
-      {view === "home" && <Home onJoin={() => go("register")} onLogin={() => go("login")} communityCount={communityCount} />}
+      {view === "home" && <Home onJoin={() => go("register")} onLogin={() => go("login")} onLearn={() => go("howto")} communityCount={communityCount} />}
+      {view === "howto" && <HowTo signedIn={Boolean(user)} onNavigate={go} />}
       {(view === "register" || view === "login" || view === "admin-login") && <AuthView mode={view} onDone={(nextUser, isAdmin) => { if (isAdmin) { go("admin"); loadAdmin(); } else { setUser(nextUser!); if (view === "register") refreshCommunityCount(); go("dashboard"); } }} onSwitch={go} />}
       {view === "dashboard" && user && <Dashboard user={user} setUser={setUser} />}
       {view === "admin" && <Admin data={admin} />}
 
       <footer className="footer">
-        <div className="container footer-grid"><div><div className="brand footer-brand"><Logo /><span>igreen<span>.ai</span></span></div><p>Small actions. Shared progress.<br/>A future we grow together.</p></div><div><strong>Explore</strong><a href="#mission" onClick={() => go("home")}>Our mission</a><a href="#pathways" onClick={() => go("home")}>Ways to act</a></div><div><strong>Your space</strong><button onClick={() => go(user ? "dashboard" : "login")}>Member sign in</button><button onClick={() => go("admin-login")}>Admin access</button></div><div className="footer-note"><span>Built for Earth</span><small>© {new Date().getFullYear()} igreen.ai</small></div></div>
+        <div className="container footer-grid"><div><div className="brand footer-brand"><Logo /><span>igreen<span>.ai</span></span></div><p>Small actions. Shared progress.<br/>A future we grow together.</p></div><div><strong>Explore</strong><a href="#mission" onClick={() => go("home")}>Our mission</a><a href="#pathways" onClick={() => go("home")}>Ways to act</a><button onClick={() => go("howto")}>How to tutorials</button></div><div><strong>Your space</strong><button onClick={() => go(user ? "dashboard" : "login")}>Member sign in</button><button onClick={() => go("admin-login")}>Admin access</button></div><div className="footer-note"><span>Built for Earth</span><small>© {new Date().getFullYear()} igreen.ai</small></div></div>
       </footer>
     </div>
   );
 }
 
-function Home({ onJoin, onLogin, communityCount }: { onJoin: () => void; onLogin: () => void; communityCount: number | null }) {
+function Home({ onJoin, onLogin, onLearn, communityCount }: { onJoin: () => void; onLogin: () => void; onLearn: () => void; communityCount: number | null }) {
   return <main>
     <section className="hero">
       <div className="hero-blob blob-one"/><div className="hero-blob blob-two"/>
@@ -140,6 +143,8 @@ function Home({ onJoin, onLogin, communityCount }: { onJoin: () => void; onLogin
       </div><div className="scroll-cue">SCROLL TO EXPLORE <span>↓</span></div>
     </section>
 
+    <Introduction />
+    <section className="home-learning section" id="how-to"><div className="container home-learning-grid"><div><span className="kicker">HOW TO GET STARTED</span><h2>Make your first step<br/><em>a confident one.</em></h2><p>From signing in to preparing your activity records, our guided tutorials make every tool feel familiar.</p><button className="button button-primary" onClick={onLearn}>Explore step-by-step tutorials <Icon name="arrow" /></button></div><div className="learning-path">{[["01", "Set up your space", "Create an account and sign in."], ["02", "Build your momentum", "Plan your goals and record sustainable actions."], ["03", "Keep progress moving", "Schedule routines, upload activities, and export records."]].map(([number, title, description]) => <div key={number}><span>{number}</span><div><h3>{title}</h3><p>{description}</p></div></div>)}</div></div></section>
     <section className="mission section" id="mission"><div className="container"><div className="section-heading centered"><span className="kicker">OUR NORTH STAR</span><h2>Make sustainability feel <em>possible.</em></h2><p>Not perfection. Not guilt. Just millions of people making better choices—and seeing those choices add up.</p></div><div className="mission-grid"><article className="mission-card coral"><span className="number">01</span><div className="mission-icon"><Icon name="spark" /></div><h3>Make it personal</h3><p>Discover practical actions shaped around your life, your resources, and what matters most to you.</p></article><article className="mission-card yellow"><span className="number">02</span><div className="mission-icon"><Icon name="chart" /></div><h3>Make it measurable</h3><p>Track the actions you take and translate everyday effort into a clear, portable impact record.</p></article><article className="mission-card green"><span className="number">03</span><div className="mission-icon"><Icon name="people" /></div><h3>Make it collective</h3><p>Join a generous community where individual progress becomes momentum for everyone.</p></article></div></div></section>
 
     <section className="pathways section" id="pathways"><div className="container"><div className="section-heading split"><div><span className="kicker">YOUR PATH, YOUR PACE</span><h2>There’s a way in<br/>for <em>everyone.</em></h2></div><p>Whether you’re changing one habit or an entire supply chain, your contribution belongs here.</p></div><div className="path-grid">
@@ -153,6 +158,11 @@ function Home({ onJoin, onLogin, communityCount }: { onJoin: () => void; onLogin
     <section className="community section" id="community"><div className="container community-inner"><div className="community-orbit"><div className="community-core"><Logo community /><b>WE ACT<br/>TOGETHER</b></div>{["A","M","K","J","R","S"].map((x,i)=><span key={x} className={`member m${i+1}`}>{x}</span>)}</div><div className="community-copy"><span className="kicker light">BETTER TOGETHER</span><h2>A community that turns hope into <em>momentum.</em></h2><p>Share what works. Learn from someone across the world. Celebrate progress without comparing perfection.</p><blockquote>“I started with one car-free Friday. Now our whole studio joins in.”<cite>— Maya, community member</cite></blockquote><button className="button button-cream" onClick={onJoin}>Find your place here <Icon name="arrow" /></button></div></div></section>
     <section className="final-cta"><div className="container"><span className="kicker">YOUR NEXT STEP</span><h2>The future needs all of us.<br/><em>It starts with one.</em></h2><p>Create your free impact space, choose a first action, and see where it leads.</p><div><button className="button button-primary button-large" onClick={onJoin}>Join igreen.ai <Icon name="arrow" /></button><button className="button button-ghost button-large" onClick={onLogin}>I already have an account</button></div><small><Icon name="lock" size={14}/> Your activity is private by default. You choose what to share.</small></div></section>
   </main>;
+}
+
+function Introduction() {
+  const [playing, setPlaying] = useState(false);
+  return <section className="introduction section" id="introduction" aria-labelledby="introduction-title"><div className="container introduction-grid"><div className="introduction-copy"><span className="kicker">MEET IGREEN.AI</span><h2 id="introduction-title">A quick introduction.<br/><em>A lasting possibility.</em></h2><p>Get to know igreen.ai through our introduction video, then explore how everyday choices become a record of progress.</p><a className="watch-link" href="https://www.youtube.com/shorts/9UGGaBKlFyE" target="_blank" rel="noopener noreferrer">Watch on YouTube <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a></div><div className="introduction-video">{playing ? <iframe src="https://www.youtube-nocookie.com/embed/9UGGaBKlFyE?autoplay=1&rel=0" title="igreen.ai introduction video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /> : <button className="video-cover" onClick={() => setPlaying(true)} aria-label="Play igreen.ai introduction video"><span className="video-cover-brand">igreen<span>.ai</span></span><span className="video-cover-orbit" aria-hidden="true"><Icon name="leaf" size={72}/></span><span className="video-play" aria-hidden="true">▶</span><span className="video-cover-title">Small actions.<br/>Shared progress.</span><span className="video-cover-caption">PLAY INTRODUCTION</span></button>}</div></div></section>;
 }
 
 function PathCard({ icon, label, title, text, items, accent, onJoin }: { icon: string; label: string; title: string; text: string; items: string[]; accent: string; onJoin: () => void }) {
