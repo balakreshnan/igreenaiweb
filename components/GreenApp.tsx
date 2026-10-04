@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import brandLogo from "@/images/igreenaisismall.jpg";
 import type { ActivitySchedule, GoalAnswers, Impact, SafeUser } from "@/lib/types";
 
 type View = "home" | "register" | "login" | "dashboard" | "admin-login" | "admin";
@@ -30,6 +32,10 @@ const icons: Record<string, React.ReactNode> = {
 
 function Icon({ name, size = 20 }: { name: string; size?: number }) {
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{icons[name]}</svg>;
+}
+
+function Logo({ community = false }: { community?: boolean }) {
+  return <Image src={brandLogo} alt="iGreen.ai logo" className={community ? "brand-logo community-logo" : "brand-logo"} sizes={community ? "72px" : "58px"} />;
 }
 
 const categoryInfo: Record<Impact["category"], { label: string; unit: string; color: string; suggestion: string }> = {
@@ -89,13 +95,13 @@ export default function GreenApp() {
 
   const go = (next: View) => { setView(next); setMenu(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  if (loading) return <div className="loader"><span className="brand-mark"><Icon name="leaf" /></span><p>Growing your space…</p></div>;
+  if (loading) return <div className="loader"><Logo /><p>Growing your space…</p></div>;
 
   return (
     <div className="app-shell">
       <header className="nav-wrap">
         <nav className="nav container" aria-label="Main navigation">
-          <button className="brand" onClick={() => go("home")} aria-label="igreen.ai home"><span className="brand-mark"><Icon name="leaf" /></span><span>igreen<span>.ai</span></span></button>
+          <button className="brand" onClick={() => go("home")} aria-label="igreen.ai home"><Logo /><span>igreen<span>.ai</span></span></button>
           <button className="menu-button" onClick={() => setMenu(!menu)} aria-label="Toggle menu"><Icon name="menu" /></button>
           <div className={`nav-links ${menu ? "open" : ""}`}>
             {view === "home" && <><a href="#mission" onClick={() => setMenu(false)}>Mission</a><a href="#pathways" onClick={() => setMenu(false)}>Take action</a><a href="#community" onClick={() => setMenu(false)}>Community</a></>}
@@ -112,7 +118,7 @@ export default function GreenApp() {
       {view === "admin" && <Admin data={admin} />}
 
       <footer className="footer">
-        <div className="container footer-grid"><div><div className="brand footer-brand"><span className="brand-mark"><Icon name="leaf" /></span><span>igreen<span>.ai</span></span></div><p>Small actions. Shared progress.<br/>A future we grow together.</p></div><div><strong>Explore</strong><a href="#mission" onClick={() => go("home")}>Our mission</a><a href="#pathways" onClick={() => go("home")}>Ways to act</a></div><div><strong>Your space</strong><button onClick={() => go(user ? "dashboard" : "login")}>Member sign in</button><button onClick={() => go("admin-login")}>Admin access</button></div><div className="footer-note"><span>Built for Earth</span><small>© {new Date().getFullYear()} igreen.ai</small></div></div>
+        <div className="container footer-grid"><div><div className="brand footer-brand"><Logo /><span>igreen<span>.ai</span></span></div><p>Small actions. Shared progress.<br/>A future we grow together.</p></div><div><strong>Explore</strong><a href="#mission" onClick={() => go("home")}>Our mission</a><a href="#pathways" onClick={() => go("home")}>Ways to act</a></div><div><strong>Your space</strong><button onClick={() => go(user ? "dashboard" : "login")}>Member sign in</button><button onClick={() => go("admin-login")}>Admin access</button></div><div className="footer-note"><span>Built for Earth</span><small>© {new Date().getFullYear()} igreen.ai</small></div></div>
       </footer>
     </div>
   );
@@ -144,7 +150,7 @@ function Home({ onJoin, onLogin, communityCount }: { onJoin: () => void; onLogin
 
     <section className="examples section"><div className="container examples-grid"><div className="examples-art"><div className="sun-disc"/><div className="hills h1"/><div className="hills h2"/><div className="tree t1">♣</div><div className="tree t2">♣</div><div className="person p1">●</div><div className="person p2">●</div><div className="impact-chip">12.4 kg <small>CO₂e saved this week</small></div></div><div className="examples-copy"><span className="kicker">START WHERE YOU ARE</span><h2>Little choices.<br/><em>Visible progress.</em></h2><div className="example-list"><div><span>01</span><p><b>Swap one commute</b>Bike, walk, carpool, or take transit once this week.</p></div><div><span>02</span><p><b>Make one meal plant-first</b>A simple plate can make a surprisingly meaningful dent.</p></div><div><span>03</span><p><b>Give something a second life</b>Repair, share, donate, or choose pre-loved before buying new.</p></div></div><button className="button button-dark" onClick={onJoin}>Track your first action <Icon name="arrow" /></button></div></div></section>
 
-    <section className="community section" id="community"><div className="container community-inner"><div className="community-orbit"><div className="community-core"><Icon name="leaf" size={44}/><b>WE ACT<br/>TOGETHER</b></div>{["A","M","K","J","R","S"].map((x,i)=><span key={x} className={`member m${i+1}`}>{x}</span>)}</div><div className="community-copy"><span className="kicker light">BETTER TOGETHER</span><h2>A community that turns hope into <em>momentum.</em></h2><p>Share what works. Learn from someone across the world. Celebrate progress without comparing perfection.</p><blockquote>“I started with one car-free Friday. Now our whole studio joins in.”<cite>— Maya, community member</cite></blockquote><button className="button button-cream" onClick={onJoin}>Find your place here <Icon name="arrow" /></button></div></div></section>
+    <section className="community section" id="community"><div className="container community-inner"><div className="community-orbit"><div className="community-core"><Logo community /><b>WE ACT<br/>TOGETHER</b></div>{["A","M","K","J","R","S"].map((x,i)=><span key={x} className={`member m${i+1}`}>{x}</span>)}</div><div className="community-copy"><span className="kicker light">BETTER TOGETHER</span><h2>A community that turns hope into <em>momentum.</em></h2><p>Share what works. Learn from someone across the world. Celebrate progress without comparing perfection.</p><blockquote>“I started with one car-free Friday. Now our whole studio joins in.”<cite>— Maya, community member</cite></blockquote><button className="button button-cream" onClick={onJoin}>Find your place here <Icon name="arrow" /></button></div></div></section>
     <section className="final-cta"><div className="container"><span className="kicker">YOUR NEXT STEP</span><h2>The future needs all of us.<br/><em>It starts with one.</em></h2><p>Create your free impact space, choose a first action, and see where it leads.</p><div><button className="button button-primary button-large" onClick={onJoin}>Join igreen.ai <Icon name="arrow" /></button><button className="button button-ghost button-large" onClick={onLogin}>I already have an account</button></div><small><Icon name="lock" size={14}/> Your activity is private by default. You choose what to share.</small></div></section>
   </main>;
 }
